@@ -74,8 +74,11 @@ func (fs *FileSystem) cd(path string, cmd int) error {
 		}
 		return nil
 	case CD_TO:
-		if _, err := os.Stat(filepath.Join(fs.currentPath...) + "/" + path); err != nil {
-			return err
+		if f, err := os.Stat(filepath.Join(fs.currentPath...) + "/" + path); !f.IsDir() || err != nil {
+			if err != nil {
+				return err
+			}
+			return fmt.Errorf("%s is folder. `cd` can ONLY use for files", f.Name())
 		}
 		(*fs).currentPath = append(fs.currentPath, path)
 		return nil
