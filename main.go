@@ -125,6 +125,16 @@ func ValidateCommand(cmd []string) (int, error) {
 	}
 }
 
+func ReadCommand(in *bufio.Reader) ([]string, error) {
+	s, err := in.ReadString('\n')
+	if err != nil {
+		return nil, err
+	}
+
+	s = strings.Join(strings.Fields(strings.TrimSpace(s)), " ")
+	return strings.Split(s, " "), nil
+}
+
 func main() {
 	defer func() { fmt.Println("The program is finished") }()
 
@@ -140,17 +150,15 @@ func main() {
 
 	toExit := false
 	for !toExit {
-		s, err := in.ReadString('\n')
+		cmd, err := ReadCommand(in)
 		if err != nil {
-			log.Fatalf("unexpected error: %s", err)
+			log.Fatalf("error while reading: %s", err)
 		}
-
-		s = strings.Join(strings.Fields(strings.TrimSpace(s)), " ")
-		cmd := strings.Split(s, " ")
 
 		commandType, err := ValidateCommand(cmd)
 		if err != nil {
 			fmt.Println(err)
+			continue
 		}
 
 		switch commandType {
