@@ -136,14 +136,23 @@ func ReadCommand(in *bufio.Reader) ([]string, error) {
 }
 
 func main() {
-	defer func() { fmt.Println("The program is finished") }()
-
 	opts := Options{}
 
 	ParseFlags(&opts)
 	if err := ValidateFlags(&opts); err != nil {
 		log.Fatalf("validation error: %s", err)
 	}
+
+	fs, err := newFileSystem(opts.path, ZIP)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func() {
+		if err := fs.close(); err != nil {
+			fmt.Println(err)
+		}
+		fmt.Println("The program is finished")
+	}()
 
 	fmt.Println("use command 'exit' to terminate program")
 	in := bufio.NewReader(os.Stdin)
@@ -167,7 +176,32 @@ func main() {
 		case HELP:
 			fmt.Println(HelpInfo(cmd[0]))
 		case LS:
+			s, err := fs.ls()
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			if len(s) == 0 {
+				fmt.Println("[]")
+				continue
+			}
 
+			fmt.Println("[")
+			for i := range s {
+				fmt.Printf("-%s\n", s[i])
+			}
+			fmt.Println("]")
+		case CD_TO, CD_BACK:
+			if err := fs.cd(cmd[1], commandType); err != nil {
+				fmt.Println(err)
+				continue
+			}
+		case PWD:
+			fmt.Println(fs.pwd())
+		case CAT:
+			if err := fs.cat(cmd[1], os.Stdout); err != nil {
+				fmt.Println(err)
+			}
 		}
 	}
 }
