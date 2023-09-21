@@ -67,6 +67,9 @@ func (fs *FileSystem) close() error {
 }
 
 func (fs *FileSystem) cd(path string, cmd int) error {
+	defer func() {
+
+	}()
 	switch cmd {
 	case CD_BACK:
 		if len(fs.currentPath) > 2 {
@@ -74,23 +77,42 @@ func (fs *FileSystem) cd(path string, cmd int) error {
 		}
 		return nil
 	case CD_TO:
-		if f, err := os.Stat(filepath.Join(fs.currentPath...) + "/" + path); !f.IsDir() || err != nil {
+		if strings.Count(path, "/") == len(path) {
+			(*fs).currentPath = fs.currentPath[:2]
+			return nil
+		}
+
+		if f, err := os.Stat(filepath.Join(fs.currentPath...) + string(os.PathSeparator) + path); !f.IsDir() || err != nil {
 			if err != nil {
 				return err
 			}
-			return fmt.Errorf("%s is folder. `cd` can ONLY use for files", f.Name())
+			return fmt.Errorf("%s is folder. `cd` can ONLY use for directories", f.Name())
 		}
-		(*fs).currentPath = append(fs.currentPath, path)
+
+		(*fs).currentPath = append(fs.currentPath, strings.Split(path, "/")...)
 		return nil
 	}
 	return fmt.Errorf("unexpected command: %d", cmd)
 }
 
-func (fs *FileSystem) ls() ([]string, error) {
-	f, err := os.Open(filepath.Join(fs.currentPath...))
+func (fs *FileSystem) ls(path string, cmd int) ([]string, error) {
+	var (
+		f   *os.File
+		err error
+	)
 	defer f.Close()
-	if err != nil {
-		return nil, err
+
+	switch cmd {
+	case LS:
+		f, err = os.Open(filepath.Join(fs.currentPath...))
+		if err != nil {
+			return nil, err
+		}
+	case LS_TO:
+		f, err = os.Open(filepath.Join(fs.currentPath...) + string(os.PathSeparator) + path)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	files, err := f.Readdir(-1)
@@ -106,11 +128,19 @@ func (fs *FileSystem) ls() ([]string, error) {
 }
 
 func (fs *FileSystem) pwd() string {
-	return ".\\" + filepath.Join(fs.currentPath[1:]...)
+	return "." + string(os.PathSeparator) + filepath.Join(fs.currentPath[1:]...)
+}
+
+func (fs *FileSystem) terminalPWD() string {
+	path := "~"
+	if len(fs.currentPath) > 2 {
+		path = path + strings.Join(fs.currentPath[2:], string(os.PathSeparator))
+	}
+	return path
 }
 
 func (fs *FileSystem) cat(from string, to *os.File) error {
-	f, err := os.Open(filepath.Join(fs.currentPath...) + "/" + from)
+	f, err := os.Open(filepath.Join(fs.currentPath...) + string(os.PathSeparator) + from)
 	defer f.Close()
 
 	if err != nil {

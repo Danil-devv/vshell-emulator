@@ -21,6 +21,7 @@ var SupportedCommands = map[string]struct{}{
 const (
 	HELP = iota
 	LS
+	LS_TO
 	CD_BACK
 	CD_TO
 	CAT
@@ -88,14 +89,14 @@ func ValidateCommand(cmd []string) (int, error) {
 		} else if cmd[1] == "--help" {
 			return HELP, nil
 		}
-		return -1, fmt.Errorf("unsupported arg: %s", cmd[1])
+		return LS_TO, nil
 	case "cd":
 		if len(cmd) != 2 {
 			return -1, fmt.Errorf("unsupported arg")
 		}
 		if cmd[1] == "--help" {
 			return HELP, nil
-		} else if cmd[1] == ".." {
+		} else if len(cmd[1]) == strings.Count(cmd[1], ".") {
 			return CD_BACK, nil
 		}
 		return CD_TO, nil
@@ -154,11 +155,13 @@ func main() {
 		fmt.Println("The program is finished")
 	}()
 
+	fmt.Printf("localhost:%s# ", fs.terminalPWD())
 	fmt.Println("use command 'exit' to terminate program")
 	in := bufio.NewReader(os.Stdin)
 
 	toExit := false
 	for !toExit {
+		fmt.Printf("localhost:%s# ", fs.terminalPWD())
 		cmd, err := ReadCommand(in)
 		if err != nil {
 			log.Fatalf("error while reading: %s", err)
@@ -175,8 +178,14 @@ func main() {
 			toExit = true
 		case HELP:
 			fmt.Println(HelpInfo(cmd[0]))
-		case LS:
-			s, err := fs.ls()
+		case LS, LS_TO:
+			var path string
+			if commandType == LS {
+				path = ""
+			} else {
+				path = cmd[1]
+			}
+			s, err := fs.ls(path, commandType)
 			if err != nil {
 				fmt.Println(err)
 				continue
