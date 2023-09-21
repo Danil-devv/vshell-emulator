@@ -9,6 +9,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -82,10 +83,9 @@ func (fs *FileSystem) cd(path string, cmd int) error {
 			return nil
 		}
 
-		if f, err := os.Stat(filepath.Join(fs.currentPath...) + string(os.PathSeparator) + path); !f.IsDir() || err != nil {
-			if err != nil {
-				return err
-			}
+		if f, err := os.Stat(filepath.Join(fs.currentPath...) + string(os.PathSeparator) + path); err != nil {
+			return err
+		} else if !f.IsDir() {
 			return fmt.Errorf("%s is folder. `cd` can ONLY use for directories", f.Name())
 		}
 
@@ -157,4 +157,12 @@ func (fs *FileSystem) cat(from string, to *os.File) error {
 
 	_, err = io.Copy(to, f)
 	return err
+}
+
+func (fs *FileSystem) runScript(from string) (string, error) {
+	res, err := exec.Command("/bin/sh", filepath.Join(fs.currentPath...)+string(os.PathSeparator)+from).Output()
+	if err != nil {
+		return "", err
+	}
+	return string(res), nil
 }

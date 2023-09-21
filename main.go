@@ -27,6 +27,7 @@ const (
 	CAT
 	PWD
 	EXIT
+	SCRIPT
 )
 
 type Options struct {
@@ -121,6 +122,14 @@ func ValidateCommand(cmd []string) (int, error) {
 		return PWD, nil
 	case "exit":
 		return EXIT, nil
+	case "--script":
+		if len(cmd) > 2 {
+			return -1, fmt.Errorf("incorrect script path: %s", strings.Join(cmd[1:], " "))
+		}
+		if len(cmd) == 1 {
+			return -1, errors.New("there is no path to script")
+		}
+		return SCRIPT, nil
 	default:
 		return -1, fmt.Errorf("unsupported command: %s", cmd[0])
 	}
@@ -211,6 +220,13 @@ func main() {
 			if err := fs.cat(cmd[1], os.Stdout); err != nil {
 				fmt.Println(err)
 			}
+		case SCRIPT:
+			res, err := fs.runScript(cmd[1])
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			fmt.Println(res)
 		}
 	}
 }
